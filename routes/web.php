@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Authmanager;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixturesController;
+use App\Http\Controllers\FineController;
 use App\Http\Controllers\PlayerController;
 
 // Authentication Routes
@@ -15,6 +16,9 @@ Route::get('/logout', [Authmanager::class, 'logout'])->name('logout');
 
 // Home Route
 Route::get('/home', function () {
+    return view('welcome'); // Replace with your actual home view
+})->name('home');
+Route::get('/', function () {
     return view('welcome'); // Replace with your actual home view
 })->name('home');
 
@@ -37,8 +41,17 @@ Route::resource('players', PlayerController::class);
 Route::get('/api/teams/{team}/players', [TeamController::class, 'getPlayers']);
 Route::get('/fixtures/{fixture}/stats_form', [FixturesController::class, 'statsForm'])->name('fixtures.statsForm');
 Route::get('/fixtures/day/{day}', [FixturesController::class, 'indexByDay'])->name('fixtures.byDay');
+Route::get('/fixtures/search', [FixturesController::class, 'search'])->name('fixtures.search');
 
 Route::post('/fixtures/{fixture}/storePlayerStats', [FixturesController::class, 'storePlayerStats'])->name('fixtures.storePlayerStats');
+// Route::get('fixtures/selectPlayer/{fixture}/{teamType}/{eventType}', [FixturesController::class, 'selectPlayer'])->name('fixtures.selectPlayer');
 
+Route::post('/fixtures/storeResult/{fixture}', [FixturesController::class, 'storeResult'])->name('fixtures.storeResult');
+// Route::get('/fixtures/selectPlayer/{fixture}/{teamType}', [FixturesController::class, 'selectPlayer'])->name('fixtures.selectPlayer');
+// Route::post('/fines/store', [FineController::class, 'store'])->name('fines.store');
+Route::get('/fixtures/{id}/lineups', [FixturesController::class, 'showLineups'])->name('fixtures.showLineups');
+// Route::get('/fixtures/selectPlayer/{fixture}/{teamType}/{eventType}', [FixturesController::class, 'selectPlayer'])->name('fixtures.selectPlayer');
+Route::get('/fixtures/selectPlayer/{fixture}', [FixturesController::class, 'selectPlayer'])->name('fixtures.selectPlayer');
 
-
+Route::post('/fixtures/storeGoals', [FixturesController::class, 'storeGoals'])->name('goals.store');
+Route::post('/fixtures/storeFines', [FixturesController::class, 'storeFines'])->name('fines.store');

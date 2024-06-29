@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\Fine;
 use App\Models\Team;
+use App\Models\Goal;
 use App\Models\Fixture;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -23,7 +24,7 @@ class FixturesController extends Controller
         // Update fixture status if match_date and starting_time conditions are met
         foreach ($fixtures as $fixture) {
             $matchDateTime = Carbon::parse($fixture->match_date . ' ' . $fixture->starting_time);
-            if ($matchDateTime->lessThanOrEqualTo(Carbon::now()) && $fixture->status != 'started') {
+            if ($matchDateTime->lessThanOrEqualTo(Carbon::now()) && $fixture->status != 'ended') {
                 $fixture->status = 'started';
                 $fixture->save();
     
@@ -144,51 +145,133 @@ class FixturesController extends Controller
 
         // return view('fixtures.stats_form', compact('fixture', 'homePlayers', 'awayPlayers'));
     }
+
+    public function showLineups($id)
+{
+    $fixture = Fixture::findOrFail($id);
+    $matchDay = $fixture->match_day;
+
+    // Get all home team players
+    $homeTeamPlayers = $fixture->homeTeam->players;
+
+    // Get all away team players
+    $awayTeamPlayers = $fixture->awayTeam->players;
+
+    // Fetch fines for the fixture's match day
+    $ineligibleHomePlayers = Fine::whereIn('player_id', $homeTeamPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    $ineligibleAwayPlayers = Fine::whereIn('player_id', $awayTeamPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    return view('fixtures.lineups', compact('fixture', 'homeTeamPlayers', 'awayTeamPlayers', 'ineligibleHomePlayers', 'ineligibleAwayPlayers'));
+}
+
+
     
-        public function storeResult(Request $request, $id)
-        {
-            $request->validate([
-                'home_team_goals' => 'required|integer',
-                'away_team_goals' => 'required|integer',
-            ]);
+public function storeResult(Request $request, $id)
+{
+    $fixture = Fixture::findOrFail($id);
+    $homeStats = HomeFixtureStat::where('fixture_id', $fixture->id)->first();
+    $awayStats = AwayFixtureStat::where('fixture_id', $fixture->id)->first();
+
+    // Update fixture with the result
+    $fixture->home_team_goals = $request->home_team_goals;
+    $fixture->away_team_goals = $request->away_team_goals;
+    $fixture->status = "ended";
+    $fixture->result = $request->home_team_goals . '-' . $request->away_team_goals;
+    $fixture->save();
+
+    // Update home team fixture stats
+    $homeStats->update([
+        'goals' => $request->home_team_goals,
+        'shots' => $request->home_team_shots,
+        'shots_on_target' => $request->home_team_shots_on_target,
+        'possession' => $request->home_team_possession,
+        'passes' => $request->home_team_passes,
+        'pass_accuracy' => $request->home_team_pass_accuracy,
+        'fouls' => $request->home_team_fouls,
+        'yellow_cards' => $request->home_team_yellow_cards,
+        'red_cards' => $request->home_team_red_cards,
+        'offsides' => $request->home_team_offsides,
+        'corners' => $request->home_team_corners,
+    ]);
+
+    // Update away team fixture stats
+    $awayStats->update([
+        'goals' => $request->away_team_goals,
+        'shots' => $request->away_team_shots,
+        'shots_on_target' => $request->away_team_shots_on_target,
+        'possession' => $request->away_team_possession,
+        'passes' => $request->away_team_passes,
+        'pass_accuracy' => $request->away_team_pass_accuracy,
+        'fouls' => $request->away_team_fouls,
+        'yellow_cards' => $request->away_team_yellow_cards,
+        'red_cards' => $request->away_team_red_cards,
+        'offsides' => $request->away_team_offsides,
+        'corners' => $request->away_team_corners,
+    ]);
+
+    // Update team statistics
+    $homeTeam = $fixture->homeTeam;
+    $awayTeam = $fixture->awayTeam;
+
+    $homeTeam->played_matches += 1;
+    $awayTeam->played_matches += 1;
+
+    $homeTeam->goals_scored += $request->home_team_goals;
+    $awayTeam->goals_scored += $request->away_team_goals;
+
+    $homeTeam->goals_conceded += $request->away_team_goals;
+    $awayTeam->goals_conceded += $request->home_team_goals;
+
+    $homeTeam->goal_difference = $homeTeam->goals_scored - $homeTeam->goals_conceded;
+    $awayTeam->goal_difference = $awayTeam->goals_scored - $awayTeam->goals_conceded;
+
+    if ($request->home_team_goals > $request->away_team_goals) {
+        $homeTeam->points += 3;
+    } elseif ($request->home_team_goals < $request->away_team_goals) {
+        $awayTeam->points += 3;
+    } else {
+        $homeTeam->points += 1;
+        $awayTeam->points += 1;
+    }
+
+    $homeTeam->save();
+    $awayTeam->save();
+
+    if ($request->home_team_red_cards > 0 || $request->away_team_red_cards > 0 || $request->home_team_goals > 0 || $request->away_team_goals > 0) {
+        $events = [
+            'home_goals' => $request->home_team_goals,
+            'away_goals' => $request->away_team_goals,
+            'home_red_cards' => $request->home_team_red_cards,
+            'away_red_cards' => $request->away_team_red_cards
+        ];
+        return redirect()->route('fixtures.selectPlayer', ['fixture' => $fixture->id, 'events' => $events]);
+    }
+
+    return redirect()->route('fixtures.index')->with('success', 'Result added successfully!');
+}
+
+public function selectPlayer($fixtureId, Request $request)
+{
+    $fixture = Fixture::findOrFail($fixtureId);
+    $homePlayers = Player::where('team_id', $fixture->home_team_id)->get();
+    $awayPlayers = Player::where('team_id', $fixture->away_team_id)->get();
+    $events = $request->events;
+
+    return view('fixtures.select_player', compact('fixture', 'homePlayers', 'awayPlayers', 'events'));
+}
+
+
+
+
     
-            $fixture = Fixture::findOrFail($id);
-            $homeTeam = $fixture->homeTeam;
-            $awayTeam = $fixture->awayTeam;
-    
-            // Update fixture with the result
-            $fixture->home_team_goals = $request->home_team_goals;
-            $fixture->away_team_goals = $request->away_team_goals;
-            $fixture->result = $request->home_team_goals . '-' . $request->away_team_goals;
-            $fixture->save();
-    
-            // Update team statistics
-            $homeTeam->played_matches += 1;
-            $awayTeam->played_matches += 1;
-    
-            $homeTeam->goals_scored += $request->home_team_goals;
-            $awayTeam->goals_scored += $request->away_team_goals;
-    
-            $homeTeam->goals_conceded += $request->away_team_goals;
-            $awayTeam->goals_conceded += $request->home_team_goals;
-    
-            $homeTeam->goal_difference = $homeTeam->goals_scored - $homeTeam->goals_conceded;
-            $awayTeam->goal_difference = $awayTeam->goals_scored - $awayTeam->goals_conceded;
-    
-            if ($request->home_team_goals > $request->away_team_goals) {
-                $homeTeam->points += 3;
-            } elseif ($request->home_team_goals < $request->away_team_goals) {
-                $awayTeam->points += 3;
-            } else {
-                $homeTeam->points += 1;
-                $awayTeam->points += 1;
-            }
-    
-            $homeTeam->save();
-            $awayTeam->save();
-    
-            return redirect()->route('fixtures.index')->with('success', 'Result added and teams updated successfully');
-        }
+
 
         // FixturesController.php
 
@@ -263,4 +346,95 @@ public function storePlayerStats(Request $request, Fixture $fixture)
 
         return view('fixtures.index', compact('fixtures', 'day'));
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+
+        $teams = Team::where('name', 'LIKE', "%$query%")->pluck('id');
+        $fixtures = Fixture::whereIn('home_team_id', $teams)
+            ->orWhereIn('away_team_id', $teams)
+            ->with('homeTeam', 'awayTeam')
+            ->get();
+
+        return response()->json($fixtures);
+    }
+
+    
+    
+    
+    public function storeGoals(Request $request)
+{
+    $fixtureId = $request->input('fixture_id');
+    
+    foreach ($request->all() as $key => $value) {
+        if (str_starts_with($key, 'home_goal_player_') || str_starts_with($key, 'away_goal_player_')) {
+            $playerId = $value;
+            $minuteKey = str_replace('player', 'minute', $key);
+            $minute = $request->input($minuteKey);
+            
+            Goal::create([
+                'player_id' => $playerId,
+                'fixture_id' => $fixtureId,
+                'minute' => $minute,
+            ]);
+
+            Player::find($playerId)->increment('goals');
+        }
+    }
+
+    
+
+    return redirect()->back()->with('success', 'Goals added successfully!');
+
+}
+
+
+public function storeFines(Request $request)
+{
+    $fixtureId = $request->input('fixture_id');
+    
+    foreach ($request->all() as $key => $value) {
+        if (str_starts_with($key, 'home_red_card_player_') || str_starts_with($key, 'away_red_card_player_')) {
+            $playerId = $value;
+            $minuteKey = str_replace('player', 'minute', $key);
+            $minute = $request->input($minuteKey);
+            
+            Fine::create([
+                'player_id' => $playerId,
+                'fixture_id' => $fixtureId,
+                'match_day_ineligible' => Fixture::find($fixtureId)->match_day + 1,
+                'reason' => 'Red Card',
+                'minute' => $minute,
+            ]);
+
+            Player::find($playerId)->increment('red_cards');
+        }
+    }
+    foreach ($request->all() as $key => $value) {
+        if (str_starts_with($key, 'home_goal_player_') || str_starts_with($key, 'away_goal_player_')) {
+            $playerId = $value;
+            $minuteKey = str_replace('player', 'minute', $key);
+            $minute = $request->input($minuteKey);
+            
+            Goal::create([
+                'player_id' => $playerId,
+                'fixture_id' => $fixtureId,
+                'minute' => $minute,
+            ]);
+
+            Player::find($playerId)->increment('goals');
+        }
+    }
+
+    return redirect()->route('fixtures.index')->with('success', 'Red cards added and fines applied successfully!');
+}
+
+    
+    
+    
+    
+
+    
+
 }

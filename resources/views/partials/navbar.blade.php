@@ -20,8 +20,8 @@
       <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
           <li><a href="#" class="nav-link px-2 text-secondary">Home</a></li>
           <li class="nav-item"><a href="/fixtures" class="nav-link">Fixitures</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Results</a></li>
-          <li class="nav-item"><a href="#" class="nav-link">Standing</a></li>
+          {{-- <li class="nav-item"><a href="#" class="nav-link">Results</a></li> --}}
+          <li class="nav-item"><a href="/teams" class="nav-link">Standing</a></li>
           <li class="nav-item"><a href="#" class="nav-link">Players stats</a></li>
 
       @auth
