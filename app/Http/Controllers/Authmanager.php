@@ -19,6 +19,8 @@ class Authmanager extends Controller
     {
         return view('registration');
     }
+
+    
    
     public function loginPost(Request $request)
     {
@@ -63,4 +65,5 @@ class Authmanager extends Controller
         Auth::logout();
         return redirect(route('login'));
     }
+    
 }

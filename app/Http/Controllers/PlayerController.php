@@ -50,6 +50,16 @@ class PlayerController extends Controller
     
         return redirect()->route('players.index')->with('success', 'Player updated successfully');
     }
+
+    public function topScorers()
+{
+    $topScorers = Player::where('goals', '>', 0)
+        ->orderBy('goals', 'desc')
+        ->with('team')
+        ->get();
+
+    return view('players.top_scorers', compact('topScorers'));
+}
     
 
     public function destroy(Player $player)

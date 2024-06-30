@@ -257,7 +257,7 @@ public function storeResult(Request $request, $id)
     return redirect()->route('fixtures.index')->with('success', 'Result added successfully!');
 }
 
-public function selectPlayer($fixtureId, Request $request)
+public function sselectPlayer($fixtureId, Request $request)
 {
     $fixture = Fixture::findOrFail($fixtureId);
     $homePlayers = Player::where('team_id', $fixture->home_team_id)->get();
@@ -393,17 +393,39 @@ public function storePlayerStats(Request $request, Fixture $fixture)
 public function storeFines(Request $request)
 {
     $fixtureId = $request->input('fixture_id');
-    
+    $fixture = Fixture::find($fixtureId);
+    $matchDay = $fixture->match_day;
+
+    // Get all home and away team players
+    $homeTeamPlayers = $fixture->homeTeam->players;
+    $awayTeamPlayers = $fixture->awayTeam->players;
+
+    // Fetch fines for the fixture's match day
+    $ineligibleHomePlayers = Fine::whereIn('player_id', $homeTeamPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->pluck('player_id')
+        ->toArray();
+
+    $ineligibleAwayPlayers = Fine::whereIn('player_id', $awayTeamPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->pluck('player_id')
+        ->toArray();
+
+    // Process Red Cards
     foreach ($request->all() as $key => $value) {
         if (str_starts_with($key, 'home_red_card_player_') || str_starts_with($key, 'away_red_card_player_')) {
             $playerId = $value;
             $minuteKey = str_replace('player', 'minute', $key);
             $minute = $request->input($minuteKey);
-            
+
+            if (in_array($playerId, $ineligibleHomePlayers) || in_array($playerId, $ineligibleAwayPlayers)) {
+                return redirect()->back()->with('error', 'Player is ineligible to play in this match.');
+            }
+
             Fine::create([
                 'player_id' => $playerId,
                 'fixture_id' => $fixtureId,
-                'match_day_ineligible' => Fixture::find($fixtureId)->match_day + 1,
+                'match_day_ineligible' => $matchDay + 1,
                 'reason' => 'Red Card',
                 'minute' => $minute,
             ]);
@@ -411,12 +433,18 @@ public function storeFines(Request $request)
             Player::find($playerId)->increment('red_cards');
         }
     }
+
+    // Process Goals
     foreach ($request->all() as $key => $value) {
         if (str_starts_with($key, 'home_goal_player_') || str_starts_with($key, 'away_goal_player_')) {
             $playerId = $value;
             $minuteKey = str_replace('player', 'minute', $key);
             $minute = $request->input($minuteKey);
-            
+
+            if (in_array($playerId, $ineligibleHomePlayers) || in_array($playerId, $ineligibleAwayPlayers)) {
+                return redirect()->back()->with('error', 'Player is ineligible to play in this match.');
+            }
+
             Goal::create([
                 'player_id' => $playerId,
                 'fixture_id' => $fixtureId,
@@ -427,10 +455,116 @@ public function storeFines(Request $request)
         }
     }
 
-    return redirect()->route('fixtures.index')->with('success', 'Red cards added and fines applied successfully!');
+    return redirect()->route('fixtures.index')->with('success', 'Goals and red cards processed successfully!');
+
 }
 
-    
+public function showDetails($id)
+{
+    $fixture = Fixture::findOrFail($id);
+    $homeStats = HomeFixtureStat::where('fixture_id', $id)->first();
+    $awayStats = AwayFixtureStat::where('fixture_id', $id)->first();
+
+    // Get goals for home team
+    $homeGoals = DB::table('goals')
+        ->join('players', 'goals.player_id', '=', 'players.id')
+        ->where('goals.fixture_id', $id)
+        ->where('players.team_id', $fixture->home_team_id)
+        ->select('players.name', 'goals.minute')
+        ->get();
+
+    // Get goals for away team
+    $awayGoals = DB::table('goals')
+        ->join('players', 'goals.player_id', '=', 'players.id')
+        ->where('goals.fixture_id', $id)
+        ->where('players.team_id', $fixture->away_team_id)
+        ->select('players.name', 'goals.minute')
+        ->get();
+
+    // Get red cards for home team
+    $homeRedCards = DB::table('fines')
+        ->join('players', 'fines.player_id', '=', 'players.id')
+        ->where('fines.fixture_id', $id)
+        ->where('players.team_id', $fixture->home_team_id)
+        ->where('fines.reason', 'Red Card')
+        ->select('players.name', 'fines.minute')
+        ->get();
+
+    // Get red cards for away team
+    $awayRedCards = DB::table('fines')
+        ->join('players', 'fines.player_id', '=', 'players.id')
+        ->where('fines.fixture_id', $id)
+        ->where('players.team_id', $fixture->away_team_id)
+        ->where('fines.reason', 'Red Card')
+        ->select('players.name', 'fines.minute')
+        ->get();
+
+    return view('fixtures.details', compact('fixture', 'homeStats', 'awayStats', 'homeGoals', 'awayGoals', 'homeRedCards', 'awayRedCards'));
+}
+
+
+public function selectPlayer($fixtureId, Request $request)
+{
+    $fixture = Fixture::findOrFail($fixtureId);
+    $homePlayers = Player::where('team_id', $fixture->home_team_id)->get();
+    $awayPlayers = Player::where('team_id', $fixture->away_team_id)->get();
+    $events = $request->events;
+
+    // Get match day for the current fixture
+    $matchDay = $fixture->match_day;
+
+    // Fetch fines for the fixture's match day
+    $ineligibleHomePlayers = Fine::whereIn('player_id', $homePlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    $ineligibleAwayPlayers = Fine::whereIn('player_id', $awayPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    return view('fixtures.select_player', compact('fixture', 'homePlayers', 'awayPlayers', 'events', 'ineligibleHomePlayers', 'ineligibleAwayPlayers'));
+}
+
+
+
+
+
+
+public function showSelectPlayer($fixtureId)
+{
+    $fixture = Fixture::findOrFail($fixtureId);
+    $matchDay = $fixture->match_day;
+
+    // Get all home team players
+    $homePlayers = $fixture->homeTeam->players;
+
+    // Get all away team players
+    $awayPlayers = $fixture->awayTeam->players;
+
+    // Fetch fines for the fixture's match day
+    $ineligibleHomePlayers = Fine::whereIn('player_id', $homePlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    $ineligibleAwayPlayers = Fine::whereIn('player_id', $awayPlayers->pluck('id'))
+        ->where('match_day_ineligible', $matchDay)
+        ->get()
+        ->keyBy('player_id');
+
+    // Example events array; you should replace it with your actual logic
+    $events = [
+        'home_goals' => 2,
+        'away_goals' => 2,
+        'home_red_cards' => 1,
+        'away_red_cards' => 1,
+    ];
+
+    return view('fixtures.select_player', compact('fixture', 'homePlayers', 'awayPlayers', 'events', 'ineligibleHomePlayers', 'ineligibleAwayPlayers'));
+}
+
     
     
     

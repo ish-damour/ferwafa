@@ -94,19 +94,31 @@
                             $currentDate = \Carbon\Carbon::now()->startOfDay();
                             $matchDateTime = \Carbon\Carbon::parse($fixture->match_date . ' ' . $fixture->starting_time);
                         @endphp
-                        <tr>
+                        <tr >
+                            @if ($status == $full)
+                            
                             <td>{{ $fixture->homeTeam->name }}</td>
                             <td class="text-center">
-                                @if ($status == $full)
                                     {{ $fixture->result }}
-                                @else
-                                    VS
-                                @endif
                             </td>
                             <td>{{ $fixture->awayTeam->name }}</td>
                             <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
                             <td><a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
+                                <a href="{{ route('fixtures.details', $fixture->id) }}" class="btn btn-primary">View More</a>
                             </td>
+                            
+                            @else
+                            <td>{{ $fixture->homeTeam->name }}</td>
+                            <td class="text-center">
+                                    VS
+                            </td>
+                            <td>{{ $fixture->awayTeam->name }}</td>
+                            <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
+                            <td><a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
+                            </td>                           
+
+                        @endif
+
                         </tr>
                     @endforeach
                 </tbody>

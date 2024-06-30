@@ -55,3 +55,7 @@ Route::get('/fixtures/selectPlayer/{fixture}', [FixturesController::class, 'sele
 
 Route::post('/fixtures/storeGoals', [FixturesController::class, 'storeGoals'])->name('goals.store');
 Route::post('/fixtures/storeFines', [FixturesController::class, 'storeFines'])->name('fines.store');
+Route::get('/fixtures/{fixture}/details', [FixturesController::class, 'showDetails'])->name('fixtures.details');
+
+Route::get('/top-scorers', [PlayerController::class, 'topScorers'])->name('top_scorers');
+Route::post('/logout', [Authmanager::class, 'logout'])->name('logout');

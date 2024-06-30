@@ -17,6 +17,8 @@
                             <th>No</th>
                             <th>Name</th>
                             <th>Team</th>
+                            <th>Goals</th>
+                            <th>Red_Cards</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -26,6 +28,8 @@
                                 <td>{{ $loop->iteration + ($players->currentPage() - 1) * $players->perPage() }}</td>
                                 <td>{{ $player->name }}</td>
                                 <td>{{ $player->team->name }}</td>
+                                <td>{{ $player->goals }}</td>
+                                <td>{{ $player->red_cards }}</td>
                                 <td>
                                     <a href="{{ route('players.edit', $player->id) }}" class="btn btn-warning btn-sm">Edit</a>
                                     <form action="{{ route('players.destroy', $player->id) }}" method="POST" class="d-inline">
