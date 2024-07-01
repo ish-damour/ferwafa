@@ -10,8 +10,8 @@ use App\Http\Controllers\PlayerController;
 // Authentication Routes
 Route::get('/login', [Authmanager::class, 'login'])->name('login');
 Route::post('/login', [Authmanager::class, 'loginPost'])->name('login.post');
-Route::get('/registration', [Authmanager::class, 'registration'])->name('registration');
-Route::post('/registration', [Authmanager::class, 'registrationPost'])->name('registration.post');
+Route::get('/registration', [Authmanager::class, 'registration'])->name('registration')->middleware('auth');
+Route::post('/registration', [Authmanager::class, 'registrationPost'])->name('registration.post')->middleware('auth');
 Route::get('/logout', [Authmanager::class, 'logout'])->name('logout');
 
 // Home Route
@@ -28,9 +28,9 @@ Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
 Route::resource('teams', TeamController::class)->except(['create', 'store']);
 
 // Fixture Routes
-Route::get('fixtures/generate', [FixturesController::class, 'generateFixtures'])->name('fixtures.generate');
+// Route::get('fixtures/generate', [FixturesController::class, 'generateFixtures'])->name('fixtures.generate');
 Route::get('fixtures/live', [FixturesController::class, 'live'])->name('fixtures.live');
-Route::get('fixtures/{id}/addResult', [FixturesController::class, 'addResult'])->name('fixtures.addResult');
+Route::get('fixtures/{id}/addResult', [FixturesController::class, 'addResult'])->name('fixtures.addResult')->middleware('auth');
 Route::post('/fixtures/{fixture}/storeResult', [FixturesController::class, 'storeResult'])->name('fixtures.storeResult');
 Route::get('/fixtures/endMatch/{id}', [FixturesController::class, 'endMatch'])->name('fixtures.endMatch');
 Route::post('/fixtures/updateLive/{id}', [FixturesController::class, 'updateLive'])->name('fixtures.updateLive');
@@ -59,3 +59,11 @@ Route::get('/fixtures/{fixture}/details', [FixturesController::class, 'showDetai
 
 Route::get('/top-scorers', [PlayerController::class, 'topScorers'])->name('top_scorers');
 Route::post('/logout', [Authmanager::class, 'logout'])->name('logout');
+
+Route::get('fixtures/generate', [FixturesController::class, 'showGenerateForm'])->name('fixtures.showGenerateForm');
+Route::post('fixtures/generate', [FixturesController::class, 'generateFixtures'])->name('fixtures.generate');
+
+Route::get('/profile', [Authmanager::class, 'show'])->name('profile');
+Route::get('/password/change', [Authmanager::class, 'showChangeForm'])->name('password.change');
+Route::post('/password/change', [Authmanager::class, 'changePassword'])->name('password.change.post');
+

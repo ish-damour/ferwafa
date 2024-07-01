@@ -1,4 +1,5 @@
 @extends('layout')
+@section("title","Home")
 @section('aside')
 <div class="container my-5">
     <div class="row">

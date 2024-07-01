@@ -41,29 +41,69 @@ class Authmanager extends Controller
         $request->validate([
             'fullname' => 'required',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed', // Added password confirmation
+            'password' => 'required|min:6|confirmed',
+            'picture' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Add validation for the picture
         ]);
-
+    
+        // Handle file upload
+        if ($request->hasFile('picture')) {
+            $image = $request->file('picture');
+            $imageName = time().'.'.$image->getClientOriginalExtension();
+            $image->move(public_path('images'), $imageName);
+        }
+    
         $data = [
             'fullname' => $request->fullname,
             'email' => $request->email,
-            'password' => Hash::make($request->password)
+            'password' => Hash::make($request->password),
+            'picture' => $imageName, // Save the image name
         ];
-
+    
         $user = User::create($data);
-
+    
         if (!$user) {
             return redirect(route('registration'))->with('error', 'Failed to register');
         }
-
+    
         return redirect(route('login'))->with('success', 'Registration successful');
     }
+    
 
     public function logout()
     {
         Session::flush();
         Auth::logout();
         return redirect(route('login'));
+    }
+
+    public function show()
+    {
+        // Logic to show the profile
+        return view('profile');
+    }
+
+    public function showChangeForm()
+    {
+        return view('auth.passwords.change');
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Current password does not match']);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return redirect()->route('home')->with('success', 'Password changed successfully');
     }
     
 }

@@ -8,11 +8,18 @@ use Illuminate\Http\Request;
 
 class PlayerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $players = Player::with('team')->paginate(20);
-        return view('players.index', compact('players'));
+        $perPage = $request->input('perPage', 20); // Default to 20 if not provided
+    
+        // Fetch players ordered by id in descending order
+        $players = Player::with('team')
+                        ->orderBy('id', 'desc')
+                        ->paginate($perPage);
+    
+        return view('players.index', compact('players', 'perPage'));
     }
+    
     
 
     public function create()

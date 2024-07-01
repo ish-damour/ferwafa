@@ -20,6 +20,7 @@
                             <th>Points</th>
                             <th>Goal Difference</th>
                             <th>Goals Scored</th>
+                            <th>Goals Conceded</th>
                             @auth
                             <th>Actions</th>
                             @endauth
@@ -28,6 +29,9 @@
                     </thead>
                     <tbody>
                         @foreach ($teams as $index => $team)
+
+                        
+                        
                         @php
                         $indexed=$index + 1;  
                       @endphp
@@ -41,6 +45,7 @@
                         <td >{{ $team->points }}</td>
                         <td >{{ $team->goal_difference }}</td>
                         <td >{{ $team->goals_scored }}</td>
+                        <td >{{ $team->goals_conceded }}</td>
                         @auth
                         <td>
                             @if ($team->played_matches>=1)
@@ -52,11 +57,11 @@
                             </form>    
                             @else
                             <a href="{{ route('teams.edit', $team->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                            <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
+                            {{-- <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>                                     
+                            </form>                                      --}}
                             @endif
                             
                         </td>
@@ -72,6 +77,8 @@
                         <td>{{ $team->points }}</td>
                         <td>{{ $team->goal_difference }}</td>
                         <td>{{ $team->goals_scored }}</td>
+                        <td >{{ $team->goals_conceded }}</td>
+                        
                         @auth
                         <td>
                             @if ($team->played_matches>=1)
@@ -83,11 +90,11 @@
                             </form>    
                             @else
                             <a href="{{ route('teams.edit', $team->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                            <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
+                            {{-- <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>                                     
+                            </form>                                      --}}
                             @endif
                             
                         </td>
@@ -103,6 +110,7 @@
                         <td>{{ $team->points }}</td>
                         <td>{{ $team->goal_difference }}</td>
                         <td>{{ $team->goals_scored }}</td>
+                        <td >{{ $team->goals_conceded }}</td>
                         @auth
                         <td>
                             @if ($team->played_matches>=1)
@@ -114,22 +122,27 @@
                             </form>    
                             @else
                             <a href="{{ route('teams.edit', $team->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                            <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
+                            {{-- <form action="{{ route('teams.destroy', $team->id) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>                                     
+                            </form>                                      --}}
                             @endif
                             
                         </td>
                         @endauth
                     </tr>                      
-                      @endif                      
-                
+                      @endif    
+                      
                         @endforeach
                     </tbody>
                 </table>
-                <a href="{{ route('teams.create') }}" class="btn btn-primary mt-3">Add New Team</a>
+                @auth
+                    @if ($teams->count() < 16)
+                        <a href="{{ route('teams.create') }}" class="btn btn-primary mt-3">Add New Team</a>
+                    @endif
+                @endauth
+               
             </div>
         </div>
     </div>

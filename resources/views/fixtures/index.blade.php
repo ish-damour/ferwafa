@@ -23,6 +23,9 @@
             </div>
 
             @auth
+            @if($fixtures->isEmpty())
+                <a href="{{route("fixtures.showGenerateForm")}}" class="btn btn-primary">Generate Fixtures</a>
+            @else
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -48,32 +51,34 @@
                             <td>{{ $fixture->match_date }}</td>
                             <td>{{ $fixture->starting_time }}</td>
                             <td>
-                                @if($matchDate->lessThanOrEqualTo($currentDate)  && ($matchDate->isToday() ? \Carbon\Carbon::parse($fixture->starting_time)->lessThanOrEqualTo(now()->format('H:i:s')) : true))
-                                @if ($fixture->status=="ended")
-                                <button class="btn btn-warning" disabled>{{$fixture->result}}</button>
-                                @else 
-                                  <a href="{{ route('fixtures.addResult', $fixture->id) }}" class="btn btn-primary">Add Result</a>
-                                @endif   
-                                
+                                @if($matchDate->lessThanOrEqualTo($currentDate) && ($matchDate->isToday() ? \Carbon\Carbon::parse($fixture->starting_time)->lessThanOrEqualTo(now()->format('H:i:s')) : true))
+                                    @if ($fixture->status == "ended")
+                                        <button class="btn btn-warning" disabled>{{ $fixture->result }}</button>
+                                    @else
+                                        <a href="{{ route('fixtures.addResult', $fixture->id) }}" class="btn btn-primary">Add Result</a>
+                                    @endif
                                 @else
                                     <button class="btn btn-secondary" disabled>Add Result</button>
                                 @endif
                                 <a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
-
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+            @endif
             @endauth
-            
+
             @guest
+            @if($fixtures->isEmpty())
+                No fixture availabe
+            @else
             <table class="table table-bordered">
                 <thead>
                     <tr>
                         <td colspan="5">
                             <form id="search-form">
-                                <input type="text" id="search-input" placeholder="search team" class="form-control">
+                                {{-- <input type="text" id="search-input" placeholder="search team" class="form-control"> --}}
                             </form>
                         </td>
                     </tr>
@@ -90,39 +95,38 @@
                         @php
                             $matchDate = \Carbon\Carbon::parse($fixture->match_date);
                             $status = $fixture->status;
-                            $full="ended";
+                            $full = "ended";
                             $currentDate = \Carbon\Carbon::now()->startOfDay();
                             $matchDateTime = \Carbon\Carbon::parse($fixture->match_date . ' ' . $fixture->starting_time);
                         @endphp
-                        <tr >
+                        <tr>
                             @if ($status == $full)
-                            
-                            <td>{{ $fixture->homeTeam->name }}</td>
-                            <td class="text-center">
+                                <td>{{ $fixture->homeTeam->name }}</td>
+                                <td class="text-center">
                                     {{ $fixture->result }}
-                            </td>
-                            <td>{{ $fixture->awayTeam->name }}</td>
-                            <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
-                            <td><a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
-                                <a href="{{ route('fixtures.details', $fixture->id) }}" class="btn btn-primary">View More</a>
-                            </td>
-                            
+                                </td>
+                                <td>{{ $fixture->awayTeam->name }}</td>
+                                <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
+                                <td>
+                                    <a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
+                                    <a href="{{ route('fixtures.details', $fixture->id) }}" class="btn btn-primary">View More</a>
+                                </td>
                             @else
-                            <td>{{ $fixture->homeTeam->name }}</td>
-                            <td class="text-center">
+                                <td>{{ $fixture->homeTeam->name }}</td>
+                                <td class="text-center">
                                     VS
-                            </td>
-                            <td>{{ $fixture->awayTeam->name }}</td>
-                            <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
-                            <td><a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
-                            </td>                           
-
-                        @endif
-
+                                </td>
+                                <td>{{ $fixture->awayTeam->name }}</td>
+                                <td>{{ $fixture->match_date }} {{ $fixture->starting_time }}</td>
+                                <td>
+                                    <a href="{{ route('fixtures.showLineups', $fixture->id) }}" class="btn btn-info">Lineups</a>
+                                </td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+            @endif
             @endguest
         </div>
     </div>

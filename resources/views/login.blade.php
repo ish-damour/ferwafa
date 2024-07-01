@@ -6,6 +6,16 @@
         <div class="col-12">
             <div class="p-4 shadow-lg">
                 <div class="container">
+                    @if (session('error'))
+                    <div class="alert alert-danger">
+                        {{ session('error') }}
+                    </div>
+                    @elseif (session('success'))
+                    <div class="alert alert-success">
+                        {{ session('success') }}
+                    </div>
+
+                @endif
                     <form class="p-4" action="{{ route('login.post') }}" method="POST">
                         @csrf
                         <div class="mb-3">

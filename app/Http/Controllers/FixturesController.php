@@ -67,25 +67,50 @@ class FixturesController extends Controller
         return view('fixtures.index', compact('fixtures'));
     }
     
-
-    public function generateFixtures()
+    public function showGenerateForm()
     {
-        $teams = Team::all()->shuffle(); // Shuffle teams randomly
+        return view('fixtures.generate');
+    }
+
+    public function generateFixtures(Request $request)
+    {
+        // Validate request inputs
+        $request->validate([
+            'startDate' => 'required|date',
+            'firsttime' => 'required|date_format:H:i',
+            'secondtime' => 'required|date_format:H:i',
+            'thirdtime' => 'required|date_format:H:i',
+            'matchDayInterval' => 'required|integer|min:1',
+        ]);
+    
+        // Retrieve and concatenate match times
+        $firsttime = $request->firsttime;
+        $secondtime = $request->secondtime;
+        $thirdtime = $request->thirdtime;
+        $fulltime = $firsttime . ',' . $secondtime . ',' . $thirdtime;
+    
+        // Parse the start date and match times
+        $startDate = Carbon::parse($request->startDate);
+        $matchTimes = explode(',', $fulltime);
+        $matchDayInterval = (int)$request->matchDayInterval;
+    
+        // Retrieve and shuffle teams
+        $teams = Team::all()->shuffle();
         $teamCount = $teams->count();
     
         if ($teamCount < 2) {
             return back()->with('error', 'Not enough teams to generate fixtures');
         }
     
+        // Initialize fixtures array
         $fixtures = [];
         $matchesPerDay = 4; // Maximum of 4 matches per day
-        $matchTimes = ['14:00', '16:00', '18:00'];
-        $startDate = Carbon::create(2024, 6, 8); // Start from June 8, 2024
         $currentMatchDayDate = $startDate->copy();
-        $matchDayInterval = 7; // 1 week interval
     
+        // Generate fixtures
         for ($matchDay = 1; $matchDay <= 30; $matchDay++) {
             $matchCount = 0;
+    
             for ($match = 0; $match < $teamCount / 2; $match++) {
                 if ($matchCount >= $matchesPerDay) {
                     $currentMatchDayDate->addDay(); // Move to next day if more than 4 matches
@@ -116,10 +141,15 @@ class FixturesController extends Controller
             $currentMatchDayDate->addDays($matchDayInterval); // Move to the next match day after one week
         }
     
+        // Insert fixtures into the database
         DB::table('fixtures')->insert($fixtures);
     
+        // Redirect with success message
         return redirect()->route('fixtures.index')->with('success', 'Fixtures generated successfully');
     }
+    
+
+
     public function addResult($id)
 {
     $fixture = Fixture::with('homeTeam', 'awayTeam')->findOrFail($id);
